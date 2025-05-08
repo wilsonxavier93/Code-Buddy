@@ -1,80 +1,134 @@
-import React, { useState, useEffect } from 'react';
-import PetStatus from './components/PetStatus';
-import PetActions from './components/PetActions';
-import SessionModal from './components/SessionModal';
+import React, { useState, useEffect } from "react";
+import PetStatus from "./components/PetStatus";
+import PetActions from "./components/PetActions";
+import SessionModal from "./components/SessionModal";
+
+// Estado inicial padrão do pet
+const ESTADO_INICIAL_PET = {
+  nome: "CodeBuddy",
+  nivel: 1,
+  experiencia: 0,
+  experienciaParaProximoNivel: 100,
+  saude: 80,
+  energia: 90,
+  felicidade: 70,
+  ultimoLogin: null,
+  linguagens: {
+    python: 0,
+    javascript: 0,
+    html: 0,
+    css: 0,
+  },
+  dias_seguidos: 0,
+  emojiAvancado: null,
+};
+
+// Função para carregar o pet do localStorage
+const carregarPetDoStorage = () => {
+  try {
+    const dadosSalvos = localStorage.getItem("petProgramador");
+    if (!dadosSalvos) return ESTADO_INICIAL_PET;
+    
+    const dadosParseados = JSON.parse(dadosSalvos);
+    
+    // Verificações de segurança e migração de dados
+    if (dadosParseados.linguagens?.emojiAvancado) {
+      dadosParseados.emojiAvancado = dadosParseados.linguagens.emojiAvancado;
+      delete dadosParseados.linguagens.emojiAvancado;
+    }
+    
+    if (!dadosParseados.hasOwnProperty("emojiAvancado")) {
+      dadosParseados.emojiAvancado = null;
+    }
+    
+    // Calcula decaimentos baseados no último login
+    if (dadosParseados.ultimoLogin) {
+      const agora = new Date();
+      const ultimoLogin = new Date(dadosParseados.ultimoLogin);
+      const diffEmHoras = Math.floor((agora - ultimoLogin) / (1000 * 60 * 60));
+      const decaimentos = Math.floor(diffEmHoras / 5);
+      
+      if (decaimentos > 0) {
+        dadosParseados.saude = Math.max(0, dadosParseados.saude - decaimentos * 10);
+        dadosParseados.energia = Math.max(0, dadosParseados.energia - decaimentos * 10);
+        dadosParseados.felicidade = Math.max(0, dadosParseados.felicidade - decaimentos * 10);
+      }
+    }
+    
+    return dadosParseados;
+  } catch (error) {
+    console.error("Erro ao carregar dados do pet:", error);
+    return ESTADO_INICIAL_PET;
+  }
+};
+
+// Função para salvar o pet no localStorage
+const salvarPetNoStorage = (petData) => {
+  try {
+    localStorage.setItem("petProgramador", JSON.stringify(petData));
+    console.log("Pet salvo com sucesso no localStorage:", petData);
+  } catch (error) {
+    console.error("Erro ao salvar pet no localStorage:", error);
+  }
+};
 
 function App() {
-  const [pet, setPet] = useState({
-    nome: "CodeBuddy",
-    nivel: 1,
-    experiencia: 0,
-    experienciaParaProximoNivel: 100,
-    saude: 80,
-    energia: 90,
-    felicidade: 70,
-    ultimoLogin: null,
-    linguagens: {
-      python: 0,
-      javascript: 0,
-      html: 0,
-      css: 0,
-      emojiAvancado: null
-    },
-    dias_seguidos: 0
-  });
+  // Inicializar o estado do pet com os dados do localStorage
+  const [pet, setPet] = useState(() => carregarPetDoStorage());
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     linguagem: "python",
     tempo: 60,
-    data: new Date().toISOString().split('T')[0]
+    data: new Date().toISOString().split("T")[0],
   });
 
+  // Verificar o localStorage ao montar o componente
   useEffect(() => {
-    const dadosSalvos = localStorage.getItem('petProgramador');
-    if (dadosSalvos) {
-      const dadosParseados = JSON.parse(dadosSalvos);
-      // Se não tem emojiAvancado salvo, adiciona null
-      if (!dadosParseados.hasOwnProperty('emojiAvancado')) {
-        dadosParseados.emojiAvancado = null;
-      }
-      setPet(dadosParseados);
+    const petStorageAtual = localStorage.getItem("petProgramador");
+    console.log("Carregando do localStorage:", petStorageAtual);
+    
+    // Se não existir dados no localStorage mas existir no estado, salve-os
+    if (!petStorageAtual && pet) {
+      console.log("Dados ausentes no localStorage. Salvando estado atual.");
+      salvarPetNoStorage(pet);
     }
   }, []);
   
-
+  // Salvar no localStorage sempre que o pet mudar
   useEffect(() => {
-    localStorage.setItem('petProgramador', JSON.stringify(pet));
+    console.log("Pet atualizado, salvando:", pet);
+    salvarPetNoStorage(pet);
   }, [pet]);
 
+  // Atualiza o emoji quando o nível chegar a 7
   useEffect(() => {
     if (pet.nivel >= 7 && pet.emojiAvancado === null) {
-      const emojisAvancados = ["🦄", "🐉", "🐥", "🦁", "🐯", "🦒", "🐶", "🐇", "🦕", "🦈", "🐳", "🐙", "🦉", "🦀", "🐠", "🦦"];
+      const emojisAvancados = ["🦄", "🐉", "🚀", "🧙‍♂️"];
       const indice = Math.floor(Math.random() * emojisAvancados.length);
       const emojiEscolhido = emojisAvancados[indice];
-  
-      setPet(prevPet => ({
+
+      setPet((prevPet) => ({
         ...prevPet,
-        emojiAvancado: emojiEscolhido
+        emojiAvancado: emojiEscolhido,
       }));
     }
   }, [pet.nivel]);
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: name === 'tempo' ? parseInt(value) : value
+      [name]: name === "tempo" ? parseInt(value) : value,
     });
   };
 
   const registrarSessao = () => {
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = new Date().toISOString().split("T")[0];
     const ultimoLoginDate = pet.ultimoLogin ? new Date(pet.ultimoLogin) : null;
     let ontem = new Date();
     ontem.setDate(ontem.getDate() - 1);
-    ontem = ontem.toISOString().split('T')[0];
+    ontem = ontem.toISOString().split("T")[0];
 
     let diasSeguidos = pet.dias_seguidos;
     if (!ultimoLoginDate) {
@@ -95,9 +149,9 @@ function App() {
     }
 
     const linguagens = { ...pet.linguagens };
-    linguagens[formData.linguagem] += formData.tempo;
+    linguagens[formData.linguagem] = (linguagens[formData.linguagem] || 0) + formData.tempo;
 
-    setPet({
+    const novoPet = {
       ...pet,
       experiencia: novaExperiencia,
       nivel: novoNivel,
@@ -107,70 +161,63 @@ function App() {
       felicidade: Math.min(100, pet.felicidade + 10),
       ultimoLogin: hoje,
       linguagens,
-      dias_seguidos: diasSeguidos
-    });
+      dias_seguidos: diasSeguidos,
+      emojiAvancado: pet.emojiAvancado,
+    };
 
+    // Atualiza o estado
+    setPet(novoPet);
+    
+    // Salva explicitamente no localStorage para garantir persistência
+    salvarPetNoStorage(novoPet);
+    
+    console.log("Sessão registrada com sucesso:", novoPet);
     setShowModal(false);
   };
 
   const alimentarPet = () => {
-    setPet({
+    const petAtualizado = {
       ...pet,
       energia: Math.min(100, pet.energia + 20),
-      saude: Math.min(100, pet.saude + 10)
-    });
+      saude: Math.min(100, pet.saude + 10),
+    };
+    setPet(petAtualizado);
+    salvarPetNoStorage(petAtualizado); // Salva explicitamente
   };
 
   const brincarComPet = () => {
-    setPet({
+    const petAtualizado = {
       ...pet,
       felicidade: Math.min(100, pet.felicidade + 15),
-      energia: Math.max(0, pet.energia - 5)
-    });
+      energia: Math.max(0, pet.energia - 5),
+    };
+    setPet(petAtualizado);
+    salvarPetNoStorage(petAtualizado); // Salva explicitamente
   };
 
   const resetarPet = () => {
-    if (confirm("Tem certeza que deseja resetar seu pet para o nível 1?")) {
-      setPet({
-        nome: "CodeBuddy",
-        nivel: 1,
-        experiencia: 0,
-        experienciaParaProximoNivel: 100,
-        saude: 80,
-        energia: 90,
-        felicidade: 70,
-        ultimoLogin: null,
-        linguagens: {
-          python: 0,
-          javascript: 0,
-          html: 0,
-          css: 0
-        },
-        dias_seguidos: 0,
-        emojiAvancado: null 
-      });
+    if (window.confirm("Tem certeza que deseja resetar seu pet para o nível 1?")) {
+      // Limpar localStorage completamente primeiro
+      localStorage.removeItem("petProgramador");
+      // Resetar para o estado inicial
+      setPet({...ESTADO_INICIAL_PET});
+      // Confirmar o reset no console
+      console.log("Pet resetado para o estado inicial");
     }
   };
-  
 
   return (
     <div className="container">
       <div className="pet-icon">
-  {pet.nivel < 3 && "🥚"}
-  {pet.nivel >= 3 && pet.nivel < 7 && "🦠"}
-  {pet.nivel >= 7 && pet.emojiAvancado}
-</div>
+        {pet.nivel < 3 && "🥚"}
+        {pet.nivel >= 3 && pet.nivel < 7 && "🦠"}
+        {pet.nivel >= 7 && pet.emojiAvancado}
+      </div>
 
-<h1 className="title">{pet.nome} - Nível {pet.nivel}</h1>
-
+      <h1 className="title">{pet.nome} - Nível {pet.nivel}</h1>
 
       <PetStatus pet={pet} />
-
-      <PetActions 
-        alimentarPet={alimentarPet} 
-        brincarComPet={brincarComPet} 
-        setShowModal={setShowModal}
-      />
+      <PetActions alimentarPet={alimentarPet} brincarComPet={brincarComPet} setShowModal={setShowModal} />
 
       <div className="stats">
         <h2>Estatísticas de Programação</h2>
@@ -188,17 +235,15 @@ function App() {
       </div>
 
       <div className="reset-container">
-  <button className="reset-button" onClick={resetarPet}>
-  🥚Resetar Pet
-  </button>
-</div>
+        <button className="reset-button" onClick={resetarPet}>Resetar Pet</button>
+      </div>
 
       {showModal && (
-        <SessionModal 
-          formData={formData} 
-          handleInputChange={handleInputChange} 
-          registrarSessao={registrarSessao} 
-          setShowModal={setShowModal} 
+        <SessionModal
+          formData={formData}
+          handleInputChange={handleInputChange}
+          registrarSessao={registrarSessao}
+          setShowModal={setShowModal}
         />
       )}
     </div>
