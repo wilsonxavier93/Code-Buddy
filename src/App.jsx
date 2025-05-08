@@ -104,7 +104,7 @@ function App() {
   // Atualiza o emoji quando o nível chegar a 7
   useEffect(() => {
     if (pet.nivel >= 7 && pet.emojiAvancado === null) {
-      const emojisAvancados = ["🦄", "🐉", "🚀", "🧙‍♂️"];
+      const emojisAvancados = ["🦄", "🐉", "🐥", "🦁", "🐯", "🦒", "🐶", "🐇", "🦕", "🦈", "🐳", "🐙", "🦉", "🦀", "🐠", "🦦"];
       const indice = Math.floor(Math.random() * emojisAvancados.length);
       const emojiEscolhido = emojisAvancados[indice];
 
